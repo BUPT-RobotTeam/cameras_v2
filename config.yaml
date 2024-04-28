@@ -1,0 +1,56 @@
+#------------------------------参数格式------------------------------
+# camera_name: 摄像头名称 (该体系下主要通过他进行区分不同的摄像头)
+# camera_type: 摄像头的类型
+#   usb_camera          : usb摄像头
+#   hik_camera_[]       : 海康工业摄像头
+#   realsense_camera_[] : 深度摄像头
+# camera_fp: 摄像头帧数
+# frame_width:  帧宽
+# frame_height: 帧高
+
+
+
+
+
+#------------------------------样例------------------------------
+camera_name: cam_test_1
+camera_type: usb_camera
+camera_fps: 30
+frame_width: 2000
+frame_height: 480
+
+---
+
+# 测试摄像头2(普通USB摄像头)
+camera_name: cam_test_2
+camera_type: usb_camera
+camera_fps: 30
+frame_width: 640
+frame_height: 480
+
+---
+
+# 测试摄像头3(海康工业摄像头)
+camera_name: cam_test_3
+camera_type: hik_camera_cs016_10uc
+camera_fps: 100
+frame_width: 1440
+frame_height: 1080
+
+---
+
+# 测试摄像头4(海康工业摄像头)
+camera_name: cam_test_4
+camera_type: hik_camera_ca013_21uc
+camera_fps: 50
+frame_width: 1280
+frame_height: 1024
+
+---
+
+# 测试摄像头5(海康工业摄像头)
+camera_name: cam_test_5
+camera_type: realsense_camera_d435i
+camera_fps: 30
+frame_width: 640
+frame_height: 480

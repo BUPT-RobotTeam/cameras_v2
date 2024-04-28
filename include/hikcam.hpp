@@ -25,7 +25,7 @@ public:
 class hikcam
 {
 public:
-    hikcam() : handle(nullptr), bayer(1024, 1280, CV_8UC1), img(1024, 1280, CV_8UC3), empty(), intv{0}, last_read(std::chrono::high_resolution_clock::now()), idx(0)
+    hikcam() : handle(nullptr), empty(), intv{0}, last_read(std::chrono::high_resolution_clock::now()), idx(0)
     {
         std::fill_n(intv, sizeof(intv) / sizeof(intv[0]), 0x7f7f7f7f);
     }
@@ -56,8 +56,12 @@ public:
         return ret;
     }
 
-    bool open(int n)
+    bool open(int n, int frame_width, int frame_height)
     {
+
+        this->bayer = cv::Mat(frame_height, frame_width, CV_8UC1);
+        this->img = cv::Mat(frame_height, frame_width, CV_8UC3);
+
         int nRet = MV_OK;
         MV_CC_DEVICE_INFO_LIST stDeviceList;
         memset(&stDeviceList, 0, sizeof(MV_CC_DEVICE_INFO_LIST));
@@ -112,9 +116,10 @@ public:
             return empty;
         }
         memcpy(bayer.data, frame.pBufAddr, frame.stFrameInfo.nFrameLen);
-        assert(frame.stFrameInfo.nWidth == 1280 && frame.stFrameInfo.nHeight == 1024);
+
         // printf("Get One Frame: Width[%d], Height[%d], nFrameNum[%d], nFrameLen[%d], enPixelType[%s]\n",
         //        frame.stFrameInfo.nWidth, frame.stFrameInfo.nHeight, frame.stFrameInfo.nFrameNum, frame.stFrameInfo.nFrameLen, format_name(frame.stFrameInfo.enPixelType));
+        //
         cv::cvtColor(bayer, img, cv::COLOR_BayerRG2RGB);
         // nRet = MV_CC_ConvertPixelType(handle, &conv);
         // sdk function is slow (~60ms per convertion)

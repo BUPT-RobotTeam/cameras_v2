@@ -16,7 +16,7 @@
 camera_name: cam_test_1
 camera_type: usb_camera
 camera_fps: 30
-frame_width: 2000
+frame_width: 640
 frame_height: 480
 
 ---

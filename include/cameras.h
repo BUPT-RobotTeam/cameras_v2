@@ -42,14 +42,19 @@ public:
 
 private:
     // 配置设置
-    bool get_cfg(std::string cfg_path);
+    void get_cfg(std::string cfg_path);
     bool cfg_is_usefule(camera_cfg& cfg);
     bool cfg_cam_type_is_useful(std::string& cam_type);
     bool cfg_cam_frame_range_is_useful(std::string& cam_type, int frame_width, int frame_height);
     bool cfg_cam_fps_is_useful(std::string& cam_type, int cam_fps);
 
+    // 提取摄像头类型信息
+    bool cam_is_hik(std::string& cam_type);
+    bool cam_is_usb(std::string& cam_type);
+    bool cam_is_realsense(std::string& cam_type);
+
     // 自动检测摄像头
-    bool auto_detect_cam();
+    void auto_detect_cam();
     bool cam_is_accessible_usb();
     bool cam_is_accessible_hik();
     bool cam_is_accessible_realsense();
@@ -69,6 +74,14 @@ private:
     rs2::pipeline cam_cfg_realsense_pipe_;
     std::string cam_type_;
     std::string cam_name_;
+    std::string cam_base_type_;
+
+    // 摄像头的位置(如果是第一个摄像头就是0，如果是第二个摄像头就是1, 以此类推)
+    int cam_pos_;            
+    int cam_usb_pos_;
+    int cam_hik_pos_;
+    int cam_realsense_pos_;
+
 
     // 深度相机配置
     rs2::config cam_cfg_realsense_;

@@ -278,7 +278,6 @@ void cameras::auto_detect_cam() {
 
 bool cameras::cam_is_accessible_usb() {
     bool cam_is_accessible = false;
-    std::cout << "Now is in cam_is_accessible_usb" << std::endl;
 
     //------------------------------检索总线上有多少个可用的USB摄像头------------------------------
     std::string command = "v4l2-ctl --list-devices";
@@ -321,7 +320,6 @@ bool cameras::cam_is_accessible_usb() {
 
 
 bool cameras::cam_is_accessible_hik(camera_cfg& cfg) {
-    std::cout << "Now is in cam_is_accessible_hik" << std::endl;
     //----------------------------------------
     // 枚举设备
     void* handle = NULL;
@@ -346,9 +344,10 @@ bool cameras::cam_is_accessible_hik(camera_cfg& cfg) {
 
             if (cam_is_accessible)
                 break;
-            else 
-                return false;
         }
+
+        if (!cam_is_accessible)
+            return false;
 
         MV_CC_DEVICE_INFO* pDeviceInfo = stDeviceList.pDeviceInfo[this->cam_hik_pos_];
         std::string cam_mode_name(reinterpret_cast<const char*>(pDeviceInfo->SpecialInfo.stUsb3VInfo.chModelName));
@@ -366,7 +365,6 @@ bool cameras::cam_is_accessible_hik(camera_cfg& cfg) {
 }
 
 bool cameras::cam_is_accessible_realsense() {
-    std::cout << "Now is in cam_is_accessible_realsense" << std::endl;
     bool cam_is_accessible = false;
 
     rs2::context ctx;

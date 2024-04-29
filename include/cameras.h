@@ -38,7 +38,7 @@ public:
     cv::Mat get_frame();
     double get_depth(int x, int y);
     double get_fps();
-    void test();
+    void print_info();
 
 private:
     // 配置设置
@@ -56,7 +56,7 @@ private:
     // 自动检测摄像头
     void auto_detect_cam();
     bool cam_is_accessible_usb();
-    bool cam_is_accessible_hik();
+    bool cam_is_accessible_hik(camera_cfg& cfg);
     bool cam_is_accessible_realsense();
 
     // 打印相机信息
@@ -67,15 +67,16 @@ public:
     static std::map<std::string, std::vector<int>> cam_frame_range;
     static std::map<std::string, std::vector<int>> cam_fps_range;
 
-private:
+public:
     // 相机类型相关
     hikcam cam_hik_;
-    cv::VideoWriter cam_usb_;
-    rs2::pipeline cam_cfg_realsense_pipe_;
+    cv::VideoCapture cam_usb_;
+    rs2::pipeline cam_realsense_pipe_;
     std::string cam_type_;
     std::string cam_name_;
     std::string cam_base_type_;
 
+private:
     // 摄像头的位置(如果是第一个摄像头就是0，如果是第二个摄像头就是1, 以此类推)
     int cam_pos_;            
     int cam_usb_pos_;

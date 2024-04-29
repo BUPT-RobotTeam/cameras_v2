@@ -32,7 +32,7 @@ frame_height: 480
 
 # 测试摄像头3(海康工业摄像头)
 camera_name: cam_test_3
-camera_type: hik_camera_cs016_10uc
+camera_type: hik_camera_mv_cs016_10uc
 camera_fps: 100
 frame_width: 1440
 frame_height: 1080
@@ -41,7 +41,7 @@ frame_height: 1080
 
 # 测试摄像头4(海康工业摄像头)
 camera_name: cam_test_4
-camera_type: hik_camera_ca013_21uc
+camera_type: hik_camera_mv_ca013_21uc
 camera_fps: 50
 frame_width: 1280
 frame_height: 1024

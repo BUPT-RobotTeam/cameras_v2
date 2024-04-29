@@ -236,9 +236,7 @@ bool cameras::cfg_cam_fps_is_useful(std::string& cam_type, int cam_fps) {
 
 void cameras::auto_detect_cam() {
     bool find_useful_cam = false;
-    this->cam_usb_pos_ = 0;
     this->cam_hik_pos_ = 0;
-    this->cam_realsense_pos_ = 0;
 
     for (camera_cfg* cfg : this->cfg_vector) {
         if (cfg->cfg_is_used_ == 0) {

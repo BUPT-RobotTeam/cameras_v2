@@ -85,9 +85,7 @@ public:
 private:
     // 摄像头的位置(如果是第一个摄像头就是0，如果是第二个摄像头就是1, 以此类推)
     int cam_pos_;            
-    int cam_usb_pos_;
     int cam_hik_pos_;
-    int cam_realsense_pos_;
     std::string cam_realsense_serial_;
 
 

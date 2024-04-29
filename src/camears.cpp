@@ -122,7 +122,11 @@ cv::Mat cameras::get_frame() {
     }
     else if (this->cam_base_type_ == "realsense_camera") {
         bool status = this->cam_realsense_pipe_.try_wait_for_frames(&this->frame_realsense_);
-        if (status) {
+        if (!status) {
+            std::cerr << "[BUPT_RC] realsense get frame error" << std::endl;
+            this->frame_.release();
+        }
+        else {
             rs2::frame color_frame = this->frame_realsense_.get_color_frame();
             cv::Mat img(cv::Size(this->frame_width_, this->frame_height_), CV_8UC3, (void*)color_frame.get_data(), cv::Mat::AUTO_STEP);
             cv::cvtColor(img, this->frame_, cv::COLOR_RGB2BGR);
@@ -237,38 +241,36 @@ void cameras::auto_detect_cam() {
     this->cam_realsense_pos_ = 0;
 
     for (camera_cfg* cfg : this->cfg_vector) {
-        if (cfg->cfg_is_used_)
-            continue;
+        if (cfg->cfg_is_used_ == 0) {
+            auto delimiter_pos = cfg->cfg_cam_type_.find('_') + sizeof("camera");
+            auto cam_base_type = cfg->cfg_cam_type_.substr(0, delimiter_pos);
 
-        auto delimiter_pos = cfg->cfg_cam_type_.find('_') + sizeof("camera");
-        auto cam_base_type = cfg->cfg_cam_type_.substr(0, delimiter_pos);
+            if (cam_base_type == "usb_camera") {
+                find_useful_cam = cam_is_accessible_usb();
+            }
+            else if (cam_base_type == "hik_camera") {
+                find_useful_cam = cam_is_accessible_hik(*cfg);
+            }
+            else if (cam_base_type == "realsense_camera") {
+                find_useful_cam = cam_is_accessible_realsense();
+            }
+            else {
+                find_useful_cam = false;
+                break;
+            }
 
-        if (cam_base_type == "usb_camera") {
-            find_useful_cam = cam_is_accessible_usb();
-        }
-        else if (cam_base_type == "hik_camera") {
-            find_useful_cam = cam_is_accessible_hik(*cfg);
-        }
-        else if (cam_base_type == "realsense_camera") {
-            find_useful_cam = cam_is_accessible_realsense();
-        }
-        else {
-            find_useful_cam = false;
-            break;
-        }
-
-        if (find_useful_cam) {
-            cfg->cfg_is_used_ = 1;
-            this->cam_name_ = cfg->cfg_cam_name_;
-            this->cam_type_ = cfg->cfg_cam_type_;
-            this->cam_fps_ = cfg->cfg_cam_fps_;
-            this->frame_width_ = cfg->cfg_frame_width_;
-            this->frame_height_ = cfg->cfg_frame_height_;
-            this->cam_base_type_ = cam_base_type;
-            break;
+            if (find_useful_cam) {
+                cfg->cfg_is_used_ = 1;
+                this->cam_name_ = cfg->cfg_cam_name_;
+                this->cam_type_ = cfg->cfg_cam_type_;
+                this->cam_fps_ = cfg->cfg_cam_fps_;
+                this->frame_width_ = cfg->cfg_frame_width_;
+                this->frame_height_ = cfg->cfg_frame_height_;
+                this->cam_base_type_ = cam_base_type;
+                break;
+            }
         }
     }
-
     if (!find_useful_cam) 
         throw std::runtime_error("No cameras are available on the bus");
 }
@@ -276,6 +278,7 @@ void cameras::auto_detect_cam() {
 
 bool cameras::cam_is_accessible_usb() {
     bool cam_is_accessible = false;
+    std::cout << "Now is in cam_is_accessible_usb" << std::endl;
 
     //------------------------------检索总线上有多少个可用的USB摄像头------------------------------
     std::string command = "v4l2-ctl --list-devices";
@@ -318,6 +321,7 @@ bool cameras::cam_is_accessible_usb() {
 
 
 bool cameras::cam_is_accessible_hik(camera_cfg& cfg) {
+    std::cout << "Now is in cam_is_accessible_hik" << std::endl;
     //----------------------------------------
     // 枚举设备
     void* handle = NULL;
@@ -342,6 +346,8 @@ bool cameras::cam_is_accessible_hik(camera_cfg& cfg) {
 
             if (cam_is_accessible)
                 break;
+            else 
+                return false;
         }
 
         MV_CC_DEVICE_INFO* pDeviceInfo = stDeviceList.pDeviceInfo[this->cam_hik_pos_];
@@ -360,6 +366,7 @@ bool cameras::cam_is_accessible_hik(camera_cfg& cfg) {
 }
 
 bool cameras::cam_is_accessible_realsense() {
+    std::cout << "Now is in cam_is_accessible_realsense" << std::endl;
     bool cam_is_accessible = false;
 
     rs2::context ctx;

@@ -1,5 +1,6 @@
 #pragma once
 #include <iostream>
+#include <fstream>
 #include <chrono>
 #include <string>
 #include <algorithm>
@@ -7,6 +8,9 @@
 #include <opencv2/core/utils/logger.hpp>
 #include <librealsense2/rs.hpp>
 #include <yaml-cpp/yaml.h>
+#include <cstdio>
+#include <cstdlib>
+#include <regex>
 #include <map>
 #include "hikcam.hpp"
 
@@ -24,6 +28,7 @@ struct camera_cfg {
     int cfg_frame_height_;
     int cfg_frame_width_;
     int cfg_cam_fps_;
+    int cfg_is_used_;
 };
 
 class cameras {
@@ -42,7 +47,8 @@ public:
 
 private:
     // 配置设置
-    void get_cfg(std::string cfg_path);
+    void get_cfg(std::string& cfg_path);
+    void cfg_update(std::string& cfg_path);
     bool cfg_is_usefule(camera_cfg& cfg);
     bool cfg_cam_type_is_useful(std::string& cam_type);
     bool cfg_cam_frame_range_is_useful(std::string& cam_type, int frame_width, int frame_height);
@@ -82,6 +88,7 @@ private:
     int cam_usb_pos_;
     int cam_hik_pos_;
     int cam_realsense_pos_;
+    std::string cam_realsense_serial_;
 
 
     // 深度相机配置
@@ -96,6 +103,7 @@ private:
 
     // 配置文件相关
     std::vector<camera_cfg*> cfg_vector;
+    std::string cfg_path_;
 
     // 计算帧数
     uint32_t intv_[10]; 

@@ -28,10 +28,12 @@ cameras::cameras(std::string cfg_path) : intv_{0}, last_read_(std::chrono::high_
     std::fill_n(this->intv_, sizeof(this->intv_) / sizeof(this->intv_[0]), 0x7f7f7f7f);
     cv::utils::logging::setLogLevel(cv::utils::logging::LOG_LEVEL_FATAL);                   // 设置opencv打印日志的等级, 不再打印warn信息
     this->cam_pos_ = 0;                                                                                        
+    this->cfg_path_ = cfg_path;
 
     try {
-        this->get_cfg(cfg_path);
+        this->get_cfg(this->cfg_path_);
         this->auto_detect_cam();
+        this->cfg_update(this->cfg_path_);
         this->print_info();
     }
     catch (const std::exception& e) {
@@ -40,6 +42,22 @@ cameras::cameras(std::string cfg_path) : intv_{0}, last_read_(std::chrono::high_
 }
 
 cameras::~cameras() {
+    YAML::Emitter out;
+    for (auto cfg : this->cfg_vector) {
+        out << YAML::BeginMap;
+        out << YAML::Key << "camera_name" << YAML::Value << cfg->cfg_cam_name_;
+        out << YAML::Key << "camera_type" << YAML::Value << cfg->cfg_cam_type_;
+        out << YAML::Key << "camera_fps" << YAML::Value << cfg->cfg_cam_fps_;
+        out << YAML::Key << "frame_width" << YAML::Value << cfg->cfg_frame_width_;
+        out << YAML::Key << "frame_height" << YAML::Value << cfg->cfg_frame_height_;
+        out << YAML::Key << "is_used" << YAML::Value << "0";
+        out << YAML::EndMap;
+    }
+    
+    std::fstream fout(this->cfg_path_);
+
+    fout << out.c_str();
+    fout.close();
     for (camera_cfg* cam_cfg : this->cfg_vector) 
         delete cam_cfg;
     std::cout << "Resources have been released" << std::endl;
@@ -55,11 +73,7 @@ bool cameras::open() {
         status = this->cam_hik_.open(this->cam_pos_, this->frame_width_, this->frame_height_);
     }
     else if (this->cam_base_type_ == "realsense_camera") {
-        rs2::context ctx;
-        rs2::device_list dev_list = ctx.query_devices(); 
-        rs2::device dev = dev_list[this->cam_realsense_pos_]; 
-        std::string serial_number = dev.get_info(RS2_CAMERA_INFO_SERIAL_NUMBER);
-        this->cam_cfg_realsense_.enable_device(serial_number);
+        this->cam_cfg_realsense_.enable_device(this->cam_realsense_serial_);
         status = true;
     }
     return status;
@@ -107,16 +121,17 @@ cv::Mat cameras::get_frame() {
         this->frame_ = this->cam_hik_.read();
     }
     else if (this->cam_base_type_ == "realsense_camera") {
-        this->frame_realsense_ = this->cam_realsense_pipe_.wait_for_frames(); 
-        rs2::frame color_frame = this->frame_realsense_.get_color_frame();
-        cv::Mat img(cv::Size(this->frame_width_, this->frame_height_), CV_8UC3, (void*)color_frame.get_data(), cv::Mat::AUTO_STEP);
-        cv::cvtColor(img, this->frame_, cv::COLOR_RGB2BGR);
+        bool status = this->cam_realsense_pipe_.try_wait_for_frames(&this->frame_realsense_);
+        if (status) {
+            rs2::frame color_frame = this->frame_realsense_.get_color_frame();
+            cv::Mat img(cv::Size(this->frame_width_, this->frame_height_), CV_8UC3, (void*)color_frame.get_data(), cv::Mat::AUTO_STEP);
+            cv::cvtColor(img, this->frame_, cv::COLOR_RGB2BGR);
+        }
     }
-
     return this->frame_;
 }
 
-void cameras::get_cfg(std::string yaml_path) {
+void cameras::get_cfg(std::string& yaml_path) {
     do {
         try {
             //----------------------------------------
@@ -132,6 +147,7 @@ void cameras::get_cfg(std::string yaml_path) {
                 cam_cfg->cfg_cam_fps_ = cfg["camera_fps"].as<int>();
                 cam_cfg->cfg_frame_width_ = cfg["frame_width"].as<int>();
                 cam_cfg->cfg_frame_height_ = cfg["frame_height"].as<int>();
+                cam_cfg->cfg_is_used_ = cfg["is_used"].as<int>();
                 
                 if (!cfg_is_usefule(*cam_cfg))
                      throw std::runtime_error("camera configuration file error");
@@ -144,6 +160,23 @@ void cameras::get_cfg(std::string yaml_path) {
         }
     } while(0);
 
+}
+void cameras::cfg_update(std::string& cfg_path) {
+    YAML::Emitter out;
+    for (auto cfg : this->cfg_vector) {
+        out << YAML::BeginMap;
+        out << YAML::Key << "camera_name" << YAML::Value << cfg->cfg_cam_name_;
+        out << YAML::Key << "camera_type" << YAML::Value << cfg->cfg_cam_type_;
+        out << YAML::Key << "camera_fps" << YAML::Value << cfg->cfg_cam_fps_;
+        out << YAML::Key << "frame_width" << YAML::Value << cfg->cfg_frame_width_;
+        out << YAML::Key << "frame_height" << YAML::Value << cfg->cfg_frame_height_;
+        out << YAML::Key << "is_used" << YAML::Value << cfg->cfg_is_used_;
+        out << YAML::EndMap;
+    }
+    
+    std::fstream fout(cfg_path);
+    fout << out.c_str();
+    fout.close();
 }
 
 bool cameras::cfg_is_usefule(camera_cfg& cfg) {
@@ -204,6 +237,9 @@ void cameras::auto_detect_cam() {
     this->cam_realsense_pos_ = 0;
 
     for (camera_cfg* cfg : this->cfg_vector) {
+        if (cfg->cfg_is_used_)
+            continue;
+
         auto delimiter_pos = cfg->cfg_cam_type_.find('_') + sizeof("camera");
         auto cam_base_type = cfg->cfg_cam_type_.substr(0, delimiter_pos);
 
@@ -222,6 +258,7 @@ void cameras::auto_detect_cam() {
         }
 
         if (find_useful_cam) {
+            cfg->cfg_is_used_ = 1;
             this->cam_name_ = cfg->cfg_cam_name_;
             this->cam_type_ = cfg->cfg_cam_type_;
             this->cam_fps_ = cfg->cfg_cam_fps_;
@@ -240,14 +277,40 @@ void cameras::auto_detect_cam() {
 bool cameras::cam_is_accessible_usb() {
     bool cam_is_accessible = false;
 
-    cv::VideoCapture cap(this->cam_usb_pos_);
-    if (cap.isOpened()) {
-        cam_is_accessible = true;
-        cap.release();
-        this->cam_pos_ = this->cam_usb_pos_;
+    //------------------------------检索总线上有多少个可用的USB摄像头------------------------------
+    std::string command = "v4l2-ctl --list-devices";
+    std::string result;
+    FILE* pipe = popen(command.c_str(), "r");
+    if (pipe) {
+        char buffer[128];
+        while (!feof(pipe)) {
+            if (fgets(buffer, 128, pipe) != nullptr)
+                result += buffer;
+        }
+        pclose(pipe);
     }
-    else {
-        cam_usb_pos_ += 2;                  // 这里是V4L2的特性，一个usb摄像头会占用两个video设备节点，很抽象
+    
+    std::vector<int> usefule_port;
+    std::smatch match;
+    std::regex regex_pattern(R"(USB 2\.0 Camera: HD USB Camera \(.*\):\s+(\/dev\/video\d+))");
+    std::string::const_iterator search_start(result.cbegin());
+    while (std::regex_search(search_start, result.cend(), match, regex_pattern)) {
+        std::string tmp = match[1];
+        usefule_port.push_back(std::stoi(tmp.substr(tmp.find("/dev/video") + sizeof("/dev/video") - 1)));
+        search_start = match.suffix().first;
+    }
+
+    //------------------------------更新port------------------------------
+    for (auto port : usefule_port) {
+        cv::VideoCapture cap(port);
+        if (cap.isOpened()) {
+            cam_is_accessible = true;
+            this->cam_pos_ = port;
+        }
+        cap.release();
+
+        if (cam_is_accessible)
+            break;;
     }
 
     return cam_is_accessible;
@@ -302,24 +365,22 @@ bool cameras::cam_is_accessible_realsense() {
     rs2::context ctx;
     rs2::device_list dev_list = ctx.query_devices(); 
 
-    if (dev_list.size() > 0 && this->cam_realsense_pos_ < dev_list.size()) {
-        rs2::device dev = dev_list[this->cam_realsense_pos_]; 
-        std::string serial_number = dev.get_info(RS2_CAMERA_INFO_SERIAL_NUMBER);
+    for (auto dev : dev_list) {
         try {
             rs2::pipeline pipeline;
             rs2::config cfg;
-            cfg.enable_device(serial_number);
+            cfg.enable_device(dev.get_info(RS2_CAMERA_INFO_SERIAL_NUMBER));
             pipeline.start(cfg);                                       // start 失败的话就不用 stop了
             pipeline.stop();
             cam_is_accessible = true;
-            this->cam_pos_ = this->cam_realsense_pos_;
+            this->cam_realsense_serial_ = dev.get_info(RS2_CAMERA_INFO_SERIAL_NUMBER);
+            break;
         } 
         catch (const rs2::error &e) {
             cam_is_accessible = false;
-            ++this->cam_realsense_pos_;
+            continue;
         }
     }
-
     return cam_is_accessible;
 }
 

@@ -43,7 +43,11 @@ public:
     cv::Mat get_frame();
     double get_depth(int x, int y);
     double get_fps();
+
     void print_info();
+    std::string get_cam_name() { return this->cam_name_; }
+    std::string get_cam_type() { return this->cam_type_; }
+
 
 private:
     // 配置设置
@@ -73,7 +77,8 @@ public:
     static std::map<std::string, std::vector<int>> cam_frame_range;
     static std::map<std::string, std::vector<int>> cam_fps_range;
 
-public:
+
+private:
     // 相机类型相关
     hikcam cam_hik_;
     cv::VideoCapture cam_usb_;
@@ -82,7 +87,6 @@ public:
     std::string cam_name_;
     std::string cam_base_type_;
 
-private:
     // 摄像头的位置(如果是第一个摄像头就是0，如果是第二个摄像头就是1, 以此类推)
     int cam_pos_;            
     int cam_hik_pos_;

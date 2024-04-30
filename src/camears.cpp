@@ -60,7 +60,7 @@ cameras::~cameras() {
     fout.close();
     for (camera_cfg* cam_cfg : this->cfg_vector) 
         delete cam_cfg;
-    std::cout << "Resources have been released" << std::endl;
+    std::cout << "Camera [" << this->cam_name_ << "] have been released" << std::endl;
 }
 
 bool cameras::open() {

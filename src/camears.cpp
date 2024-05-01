@@ -132,7 +132,27 @@ cv::Mat cameras::get_frame() {
             cv::cvtColor(img, this->frame_, cv::COLOR_RGB2BGR);
         }
     }
+    auto endtime = std::chrono::high_resolution_clock::now();
+    auto us = std::chrono::duration_cast<std::chrono::microseconds>(endtime - this->last_read_);
+    this->intv_[this->idx_++] = us.count();
+    this->last_read_ = endtime;
+    if (this->idx_ == sizeof(this->intv_) / sizeof(this->intv_[0]))
+        this->idx_ = 0;
     return this->frame_;
+}
+
+double cameras::get_fps() {
+    uint64_t total = 0;
+    uint64_t size = 0;
+    for (auto x : this->intv_)
+    {
+        if (x != 0x7f7f7f7f)
+        {
+            total += x;
+            size++;
+        }
+    }
+    return 1.0e6 / (total / double(size));
 }
 
 void cameras::get_cfg(std::string& yaml_path) {
@@ -310,7 +330,7 @@ bool cameras::cam_is_accessible_usb() {
         cap.release();
 
         if (cam_is_accessible)
-            break;;
+            break;
     }
 
     return cam_is_accessible;

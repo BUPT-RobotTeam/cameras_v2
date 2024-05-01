@@ -32,4 +32,5 @@ target_link_libraries(test
     ${OpenCV_LIBS} 
     ${realsense2_LIBRARY}
     yaml-cpp::yaml-cpp
+    pthread
 )

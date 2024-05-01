@@ -17,8 +17,7 @@
 #define CAMERAS_CHECK(state, str) \
     do { \
         if (!(state)) { \
-            std::cerr << (str) << std::endl; \
-            return -1; \
+            throw std::runtime_error(str); \
         } \
     } while (false)
 

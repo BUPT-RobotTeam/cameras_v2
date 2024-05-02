@@ -33,8 +33,10 @@ int main() {
     std::thread threads[camera_num];
     std::string cfg_path = "/home/bupt-rc/Code/opencv/2024/cameras_v2/config.yaml";
     
-    for (int i = 0; i < camera_num; ++i)
+    for (int i = 0; i < camera_num; ++i) {
         threads[i] = std::thread(thread_function, std::ref(cfg_path));
+        std::this_thread::sleep_for(std::chrono::seconds(2));
+    }
 
     for (int i = 0; i < camera_num; ++i)
         threads[i].join();
